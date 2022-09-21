@@ -28,8 +28,8 @@ only forth
 \ Some more WiFi words
 
 \ >>>>>>>>>>>>>>>>>>>>> EDIT THESE to suit your router name and password <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-z" Yourroutersname" 			value routername		\ <<<<<<<<<<<<<<< EDIT!!
-z" Yourrouterspassword"     	value password			\ <<<<<<<<<<<<<<< EDIT!!  
+z" Yourroutersname"             value routername            \ <<<<<<<<<<<<<<< EDIT!!
+z" Yourrouterspassword"         value password              \ <<<<<<<<<<<<<<< EDIT!!  
 
 
 \ case statement
@@ -43,49 +43,49 @@ internals
 
 sockets also WiFi definitions
 
-: status.    ( -- )                             \ print WiFi connection status
+: status.    ( -- )                                         \ print WiFi connection status
 ." Current WiFi status = " 
 WiFi.status
-	case
-		0 of ." no SSID available" endof
-		1 of ." no SSID available" endof
-		2 of ." scan networks complete" endof
-		3 of ." connected" endof
-		4 of ." connection failed" endof
-		5 of ." connection lost" endof
-		6 of ." disconnected" endof
-		.
-	endcase
-	cr
+    case
+        0 of ." no SSID available" endof
+        1 of ." no SSID available" endof
+        2 of ." scan networks complete" endof
+        3 of ." connected" endof
+        4 of ." connection failed" endof
+        5 of ." connection lost" endof
+        6 of ." disconnected" endof
+        .
+    endcase
+    cr
 ;
 
 : login ( z"machinename z"routername z"password -- )
    WIFI_MODE_STA Wifi.mode
    WiFi.begin
-	begin
-		WiFi.localIP 0=
-	while
-		100 ms
-	repeat
-	WiFi.localIP ." Address allotted is " ip. cr
-	MDNS.begin
-	if
-		." MDNS started"
-	else
-		." MDNS failed"
-	then
-	cr ;
+    begin
+        WiFi.localIP 0=
+    while
+        100 ms
+    repeat
+    WiFi.localIP ." Address allotted is " ip. cr
+    MDNS.begin
+    if
+        ." MDNS started"
+    else
+        ." MDNS failed"
+    then
+    cr ;
    
-: WiFiConnect	( z"machinename -- )
+: WiFiConnect    ( z"machinename -- )
 routername password login
-status.														\ report our Wifi link status
+status.                                                        \ report our Wifi link status
 ;
 
-: WiFiDisconnect	( -- )
-WiFi.disconnect												\ disconnect
+: WiFiDisconnect    ( -- )
+WiFi.disconnect                                                \ disconnect
 ." Now disconnecting" cr
-2000 ms		
-status.														\ report WiFi status again
+2000 ms        
+status.                                                        \ report WiFi status again
 ;
 
 
@@ -99,132 +99,132 @@ forth definitions
 only also WiFi also sockets
 
 \ duplicate the 3rd item on the stack to t.o.s.
-: 3rddup	( n1 n2 n3 -- n1 n2 n3 n1 )
-	>r over r> swap
+: 3rddup    ( n1 n2 n3 -- n1 n2 n3 n1 )
+    >r over r> swap
 ;
 
 \ duplicate the top 3 stack items
-: 3dup		( n1 n2 n3 -- n1 n2 n3 n1 n2 n3 )
-	3rddup 3rddup 3rddup
+: 3dup        ( n1 n2 n3 -- n1 n2 n3 n1 n2 n3 )
+    3rddup 3rddup 3rddup
 ;
 
 \ display decoded sockaddr structure
-: sockaddr.		( sockaddr -- )
-	."     sockaddr length = " dup C@ U. cr
-	."              family = " dup 1+ C@ . cr
-	."                port = " dup ->port@ U. cr
-	."             address = " ->addr@ ip.
+: sockaddr.        ( sockaddr -- )
+    ."     sockaddr length = " dup C@ U. cr
+    ."              family = " dup 1+ C@ . cr
+    ."                port = " dup ->port@ U. cr
+    ."             address = " ->addr@ ip.
 ;
 
 \ initialise a sockaddr structure with AF_INET and 16 byte sockaddr size, the rest all zeros
-: sockaddr!		( addr -- )
-	DUP sizeof(sockaddr_in) swap C!
-	1+ DUP AF_INET swap C!
-	14 0 DO
-		1+
-		DUP 0 SWAP C!
-	LOOP
-	DROP
+: sockaddr!        ( addr -- )
+    DUP sizeof(sockaddr_in) swap C!
+    1+ DUP AF_INET swap C!
+    14 0 DO
+        1+
+        DUP 0 SWAP C!
+    LOOP
+    DROP
 ;
 
 \ TCP Class
 OBJECT CLASS
-	4 cells VAR locsockaddr								\ local sockaddr_in
-	cell VAR locsock									\ local socket id
-	4 cells VAR remsockaddr								\ remote sockaddr_in
-	cell VAR remsock									\ remote socket id
-	cell VAR remaddrlen									\ remote sockaddr_in length
-	cell VAR timeout									\ maximum period before timeout occurs
-	METHOD TCPCONNECT									\ Connect as TCP Client
-	METHOD TCPLISTEN									\ Connect as TCP Server
-	METHOD READ											\ Read a data bytes
-	METHOD WRITE										\ Write a data bytes
-	METHOD CLOSE										\ Close a TCP Client / Server connection
-	METHOD VARS.										\ Display all internal variables
+    4 cells VAR locsockaddr                                 \ local sockaddr_in
+    cell VAR locsock                                        \ local socket id
+    4 cells VAR remsockaddr                                 \ remote sockaddr_in
+    cell VAR remsock                                        \ remote socket id
+    cell VAR remaddrlen                                     \ remote sockaddr_in length
+    cell VAR timeout                                        \ maximum period before timeout occurs
+    METHOD TCPCONNECT                                       \ Connect as TCP Client
+    METHOD TCPLISTEN                                        \ Connect as TCP Server
+    METHOD READ                                             \ Read a data bytes
+    METHOD WRITE                                            \ Write a data bytes
+    METHOD CLOSE                                            \ Close a TCP Client / Server connection
+    METHOD VARS.                                            \ Display all internal variables
 END-CLASS TCP
 
 \ TCP Class - Methods
 
 \ TCPCONNECT - Initialise a TCP Client connection
 :noname
-	>R
-	R@ locsockaddr sockaddr!
-	R@ remsockaddr sockaddr!								\ initialise the sockaddrs
-	R@ locsockaddr ->port!									\ save the port required in locsockaddr
-	R@ locsockaddr ->addr!									\ save ip address in locsockaddr
-	AF_INET SOCK_STREAM 0 socket R@ locsock !				\ create a socket
-	R@ locsock @ R> locsockaddr sizeof(sockaddr_in) connect	\ and connect
-	throw													\ but throw on error
-; TCP DEFINES TCPCONNECT									( ipaddrrange port obj -- )
+    >R
+    R@ locsockaddr sockaddr!
+    R@ remsockaddr sockaddr!                                \ initialise the sockaddrs
+    R@ locsockaddr ->port!                                  \ save the port required in locsockaddr
+    R@ locsockaddr ->addr!                                  \ save ip address in locsockaddr
+    AF_INET SOCK_STREAM 0 socket R@ locsock !               \ create a socket
+    R@ locsock @ R> locsockaddr sizeof(sockaddr_in) connect \ and connect
+    throw                                                   \ but throw on error
+; TCP DEFINES TCPCONNECT                                    ( ipaddrrange port obj -- )
 
 \ TCPLISTEN - Initialise a TCP server connection - blocks execution until the client connects
 :noname 
-	>R
-	R@ locsockaddr sockaddr!
-	R@ remsockaddr sockaddr!								\ initialise teh sockaddrs
-	R@ locsockaddr ->port!									\ save the port we're listening on
-	R@ locsockaddr ->addr!									\ save the ip address range we're listening out for
-	AF_INET SOCK_STREAM 0 socket R@ locsock !				\ create a streaming socket
-	R@ locsock @ R@ locsockaddr sizeof(sockaddr_in)
-	bind throw												\ bind the socket to the address
-	R@ locsock @ 0 listen throw								\ listen for someone to connect
-	sizeof(sockaddr_in) R@ remaddrlen !						\ remsockaddr not received unless this preset 16
-	R@ locsock @ R@ remsockaddr R@ remaddrlen
-	sockaccept												\ unblocks when a connection request is made
-	dup -1 =
-	IF
-		throw
-	ELSE
-		R> remsock !										\ store the remote socket id received
-	THEN
-; TCP DEFINES TCPLISTEN										( ipaddrrange port obj -- )
+    >R
+    R@ locsockaddr sockaddr!
+    R@ remsockaddr sockaddr!                                \ initialise teh sockaddrs
+    R@ locsockaddr ->port!                                  \ save the port we're listening on
+    R@ locsockaddr ->addr!                                  \ save the ip address range we're listening out for
+    AF_INET SOCK_STREAM 0 socket R@ locsock !               \ create a streaming socket
+    R@ locsock @ R@ locsockaddr sizeof(sockaddr_in)
+    bind throw                                              \ bind the socket to the address
+    R@ locsock @ 0 listen throw                             \ listen for someone to connect
+    sizeof(sockaddr_in) R@ remaddrlen !                     \ remsockaddr not received unless this preset 16
+    R@ locsock @ R@ remsockaddr R@ remaddrlen
+    sockaccept                                              \ unblocks when a connection request is made
+    dup -1 =
+    IF
+        throw
+    ELSE
+        R> remsock !                                        \ store the remote socket id received
+    THEN
+; TCP DEFINES TCPLISTEN                                     ( ipaddrrange port obj -- )
 
 \ Reads data from a buffer at addr, length n bytes
 :noname
-	locsock @ -rot											( [locsock] addr nreqd )
-	begin
-		3dup												( [locsock] addr nreqd [locsock] addr nreqd )
-		0 recv DUP 0< THROW									( [locsock] addr nreqd nrecvd )
-		dup >r -											( [locsock] addr nreqd-nrecvd : nrcvd )
-		swap r> + swap dup 0=								( [locsock] addr+nrcvd nreqd-nrecvd )
-	until
-	2drop drop												( -- )
-; TCP DEFINES READ											( addr n obj -- )
+    locsock @ -rot                                          ( [locsock] addr nreqd )
+    begin
+        3dup                                                ( [locsock] addr nreqd [locsock] addr nreqd )
+        0 recv DUP 0< THROW                                 ( [locsock] addr nreqd nrecvd )
+        dup >r -                                            ( [locsock] addr nreqd-nrecvd : nrcvd )
+        swap r> + swap dup 0=                               ( [locsock] addr+nrcvd nreqd-nrecvd )
+    until
+    2drop drop                                              ( -- )
+; TCP DEFINES READ                                          ( addr n obj -- )
 
 
 \ Write data to a buffer at addr, length n bytes
 :noname
-	remsock @ -rot											( [remsock] addr nreqd )
-	begin
-		3dup												( [remsock] addr nreqd [remsock] addr nreqd )
-		0 send DUP 0< THROW									( [remsock] addr nreqd nrecvd )
-		dup >r -											( [remsock] addr nreqd-nrecvd : nrcvd )
-		swap r> + swap dup 0=								( [remsock] addr+nrcvd nreqd-nrecvd flag )
-	until
-	2drop drop												( -- )
-; TCP DEFINES WRITE											( addr n1 -- )
+    remsock @ -rot                                          ( [remsock] addr nreqd )
+    begin
+        3dup                                                ( [remsock] addr nreqd [remsock] addr nreqd )
+        0 send DUP 0< THROW                                    ( [remsock] addr nreqd nrecvd )
+        dup >r -                                            ( [remsock] addr nreqd-nrecvd : nrcvd )
+        swap r> + swap dup 0=                               ( [remsock] addr+nrcvd nreqd-nrecvd flag )
+    until
+    2drop drop                                              ( -- )
+; TCP DEFINES WRITE                                         ( addr n1 -- )
 
 \ Close the connection
 :noname 
-	>R
-		R@ locsock @ CLOSE-FILE drop						\ close local socket
-		R> remsock @ CLOSE-FILE drop						\ close remote socket
-; TCP DEFINES CLOSE											( obj -- )
+    >R
+        R@ locsock @ CLOSE-FILE drop                        \ close local socket
+        R> remsock @ CLOSE-FILE drop                        \ close remote socket
+; TCP DEFINES CLOSE                                         ( obj -- )
 
 :noname 
-	>R
-	cr ." locsockaddr : " R@ locsockaddr cr sockaddr.
-	cr ." locksock    = " R@ locsock @ .
-	cr ." remaddrlen = "  R@ remaddrlen @ .
-	cr ." remsockaddr : " R@ remsockaddr cr sockaddr.
-	cr ." remsock     = " R@ remsock @ .
-	cr ." timeout     = " R> timeout @ .
-; TCP DEFINES VARS.											( -- )
+    >R
+    cr ." locsockaddr : " R@ locsockaddr cr sockaddr.
+    cr ." locksock    = " R@ locsock @ .
+    cr ." remaddrlen = "  R@ remaddrlen @ .
+    cr ." remsockaddr : " R@ remsockaddr cr sockaddr.
+    cr ." remsock     = " R@ remsock @ .
+    cr ." timeout     = " R> timeout @ .
+; TCP DEFINES VARS.                                         ( -- )
 
- 	\ Decode errno and display an error code
+     \ Decode errno and display an error code
 : .socketError ( -- ) 
     errno
-	case
+    case
       1 of   ." Not owner "                      endof
       2 of   ." No such file "                   endof
       3 of   ." No such process "                endof
@@ -288,64 +288,64 @@ END-CLASS TCP
      63 of   ." File name too long "             endof
      64 of   ." Host is down "                   endof
     ." Error " .
-	endcase
+    endcase
   ;
 
 \ Test programs - notice how the TCP interface is greatly simplified by the TCP Class
 
 variable count
 
-TCP NEW CONSTANT MYTCP										\ Create a TCP object called MYTCP to work with
+TCP NEW CONSTANT MYTCP                                      \ Create a TCP object called MYTCP to work with
 
 \ TCP Server that transmits a stream of longs, one at a time, from a sawtooth waveform
-: (TEST1)	( -- )
-	0 9999 MYTCP TCPLISTEN									\ Start a TCP Server and wait for a client to connect
-	0 count !												\ this is used to creat the sawtooth
-		BEGIN
-			count 4 MYTCP WRITE								\ send the data counter
-			cr ." transmitted data = "
-			count @ .
-			1 count +!										\ increment the data counter
-			count @ 50 = if 0 count ! then					\ limit the counter to 50 max
-			25 ms
-			key?											\ stop if key pressed
-		UNTIL
-	MYTCP CLOSE												\ and close the connection
+: (TEST1)    ( -- )
+    0 9999 MYTCP TCPLISTEN                                  \ Start a TCP Server and wait for a client to connect
+    0 count !                                               \ this is used to creat the sawtooth
+        BEGIN
+            count 4 MYTCP WRITE                             \ send the data counter
+            cr ." transmitted data = "
+            count @ .
+            1 count +!                                      \ increment the data counter
+            count @ 50 = if 0 count ! then                  \ limit the counter to 50 max
+            25 ms
+            key?                                            \ stop if key pressed
+        UNTIL
+    MYTCP CLOSE                                             \ and close the connection
 ;
 
 \ TCP Server that transmits a stream of longs from a sawtooth waveform - with error reporting - start this first
-: TEST1	( -- )
-	cr ." Connecting to the Wifi router ..."
-	z" forth1" WiFiConnect
-	cr ." Waiting for a client to connect..."
-	['] (TEST1) catch 0<>
-	IF
-		.socketError											\ if an error is throwm, decode and display
-	THEN
-	WiFiDisconnect
+: TEST1    ( -- )
+    cr ." Connecting to the Wifi router ..."
+    z" forth1" WiFiConnect
+    cr ." Waiting for a client to connect..."
+    ['] (TEST1) catch 0<>
+    IF
+        .socketError                                        \ if an error is throwm, decode and display
+    THEN
+    WiFiDisconnect
 ;
 
 \ TCP Client which receives a stream of longs from the server - notice the m/c name is forth1.local not forth1
-: (TEST2)	( -- )
-	z" forth1.local" gethostbyname ->h_addr 9999			( ipaddr port )
-	MYTCP TCPCONNECT										\ Connect to the waiting server
-	BEGIN
-		count 4 MYTCP READ									\ count = a 32 bit value from the server
-		cr ." received data = " count @ .
-		key?
-	UNTIL
-	MYTCP CLOSE
+: (TEST2)    ( -- )
+    z" forth1.local" gethostbyname ->h_addr 9999            ( ipaddr port )
+    MYTCP TCPCONNECT                                        \ Connect to the waiting server
+    BEGIN
+        count 4 MYTCP READ                                  \ count = a 32 bit value from the server
+        cr ." received data = " count @ .
+        key?
+    UNTIL
+    MYTCP CLOSE
 ;
 
 \ TCP Client which receives a stream of longs from the server - with error reporting
 \ Start this after the server is started
-: TEST2		( -- )
-	cr ." Connecting to the Wifi router ..."
-	z" forth2" WiFiConnect
-	['] (TEST2) catch 0<>
-	IF
-		.socketError
-	THEN
-	WiFiDisconnect
+: TEST2        ( -- )
+    cr ." Connecting to the Wifi router ..."
+    z" forth2" WiFiConnect
+    ['] (TEST2) catch 0<>
+    IF
+        .socketError
+    THEN
+    WiFiDisconnect
 ;
 
