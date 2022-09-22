@@ -40,7 +40,7 @@ CREATE BLIST 15 CELLS ALLOT
 
 : >indents ( -- ) 0 indents MAX 12 MIN SPACES ;
 
-: .stack ( -- ) ." [ d-stack " DEPTH ?DUP IF 1 SWAP DO I 1- PICK . -1
+: .stack ( -- ) ." [ " DEPTH ?DUP IF 1 SWAP DO I 1- PICK . -1
   +LOOP ." ]" ELSE ." empty ]" THEN  ;
 
 : .name ( CFA -- ) >NAME TYPE ;
