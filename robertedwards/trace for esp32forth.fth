@@ -1,7 +1,8 @@
 TRACE - originally by Mark Wills - see https://www.bernd-paysan.de/screenful.html
 \ Adapted for ESP32forth by Bob Edwards Sept 2022
 \ A small piece of code, but very effective at showing word flow  & entry and exit data stack conditions
-\ It's very simple, so easily understood and added to 
+\ It's very simple so easily understood and added to 
+
 
 DEFINED? *TRACE* [IF] forget *TRACE* [THEN] 
 : *TRACE* ;
